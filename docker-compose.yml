@@ -1,0 +1,70 @@
+services:
+  api: &main_app
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: test_app:${TEST_APP_VERSION:-latest}
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      TEST_APP_HOST: 0.0.0.0
+      TEST_APP_DB_HOST: test_app-db
+      TEST_APP_DB_PORT: 5432
+      TEST_APP_DB_USER: test_app
+      TEST_APP_DB_PASS: test_app
+      TEST_APP_DB_BASE: test_app
+      TEST_APP_REDIS_HOST: test_app-redis
+
+  db:
+    image: postgres:16.3-bullseye
+    hostname: test_app-db
+    environment:
+      POSTGRES_PASSWORD: "test_app"
+      POSTGRES_USER: "test_app"
+      POSTGRES_DB: "test_app"
+    volumes:
+      - test_app-db-data:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: pg_isready -U test_app
+      interval: 2s
+      timeout: 3s
+      retries: 40
+
+  migrator:
+    image: test_app:${TEST_APP_VERSION:-latest}
+    restart: "no"
+    command: alembic upgrade head
+    environment:
+      TEST_APP_DB_HOST: test_app-db
+      TEST_APP_DB_PORT: 5432
+      TEST_APP_DB_USER: test_app
+      TEST_APP_DB_PASS: test_app
+      TEST_APP_DB_BASE: test_app
+    depends_on:
+      db:
+        condition: service_healthy
+
+  redis:
+    image: bitnami/redis:6.2.5
+    hostname: "test_app-redis"
+    restart: always
+    environment:
+      ALLOW_EMPTY_PASSWORD: "yes"
+    healthcheck:
+      test: redis-cli ping
+      interval: 1s
+      timeout: 3s
+      retries: 50
+
+
+
+volumes:
+  test_app-db-data:
+    name: test_app-db-data
