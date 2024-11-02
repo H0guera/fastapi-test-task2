@@ -1,3 +1,5 @@
 import sqlalchemy as sa
 
-meta = sa.MetaData()
+from test_app.settings import settings
+
+meta = sa.MetaData(naming_convention=settings.naming_conventions)
