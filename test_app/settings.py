@@ -1,4 +1,6 @@
 import enum
+import os
+import secrets
 from pathlib import Path
 from tempfile import gettempdir
 from typing import Optional
@@ -20,6 +22,13 @@ class LogLevel(str, enum.Enum):
     FATAL = "FATAL"
 
 
+class AuthJWT(BaseSettings):
+    """Auth jwt settings."""
+
+    users_secret: str = os.getenv("USERS_SECRET", secrets.token_urlsafe())
+    algorithm: str = "HS256"
+
+
 class Settings(BaseSettings):
     """
     Application settings.
@@ -39,6 +48,10 @@ class Settings(BaseSettings):
     environment: str = "dev"
 
     log_level: LogLevel = LogLevel.INFO
+
+    # Auth JWT variables
+    auth_jwt: AuthJWT = AuthJWT()
+
     # Variables for the database
     db_host: str = "localhost"
     db_port: int = 5432
