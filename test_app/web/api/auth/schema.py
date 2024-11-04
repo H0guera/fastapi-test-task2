@@ -1,8 +1,13 @@
 from pydantic import BaseModel
 
 
-class UserCreate(BaseModel):
-    """DTO for creating new user model."""
+class UserBase(BaseModel):
+    """Base user's model."""
 
     username: str
+
+
+class UserCreate(UserBase):
+    """DTO for creating new user model."""
+
     password: str
