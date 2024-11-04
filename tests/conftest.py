@@ -1,5 +1,6 @@
 from typing import Any, AsyncGenerator
 
+import bcrypt
 import pytest
 from fakeredis import FakeServer
 from fakeredis.aioredis import FakeConnection
@@ -14,10 +15,14 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from test_app.db.dependencies import get_db_session
+from test_app.db.models.users import User
 from test_app.db.utils import create_database, drop_database
 from test_app.services.redis.dependency import get_redis_pool
 from test_app.settings import settings
+from test_app.utils.ensure_types import ensure_bytes, ensure_str
 from test_app.web.application import get_app
+
+USER_PASSWORD = "VedroKumisa"  # noqa: S105
 
 
 @pytest.fixture(scope="session")
@@ -130,3 +135,18 @@ async def client(
     """
     async with AsyncClient(app=fastapi_app, base_url="http://test", timeout=2.0) as ac:
         yield ac
+
+
+@pytest.fixture
+async def user(
+    dbsession: AsyncSession,
+) -> User:
+    """Fixture for creating existing user."""
+    claim_password = USER_PASSWORD
+    hashed_password = ensure_str(
+        bcrypt.hashpw(password=ensure_bytes(claim_password), salt=bcrypt.gensalt()),
+    )
+    new_user = User(username="NoskiSNachesom", hashed_password=hashed_password)
+    dbsession.add(new_user)
+    await dbsession.commit()
+    return new_user
