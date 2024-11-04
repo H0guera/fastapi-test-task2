@@ -26,6 +26,7 @@ aiofiles = "^24.1.0"
 httptools = "^0.6.1"
 pymongo = "^4.8.0"
 bcrypt = "^4.2.0"
+pyjwt = "^2.9.0"
 
 
 [tool.poetry.group.dev.dependencies]
