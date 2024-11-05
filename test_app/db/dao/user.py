@@ -1,25 +1,39 @@
+from datetime import timedelta
 from typing import TYPE_CHECKING
 
 import bcrypt
 from fastapi import Depends
+from redis.asyncio import Redis
 from sqlalchemy import select
 
 from test_app.db.dependencies import get_db_session
 from test_app.db.models.users import User
+from test_app.services.redis.dependency import get_redis_pool
+from test_app.settings import settings
 from test_app.utils.ensure_types import ensure_bytes, ensure_str
 from test_app.web.api.auth.schema import UserCreate
 from test_app.web.api.exceptions import UserAlreadyExistsError
 
 if TYPE_CHECKING:
+    from redis.asyncio import ConnectionPool
     from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class UserDAO:
     """Class for accessing user table."""
 
-    def __init__(self, session: "AsyncSession" = Depends(get_db_session)) -> None:
+    def __init__(
+        self,
+        session: "AsyncSession" = Depends(get_db_session),
+        redis_pool: "ConnectionPool" = Depends(get_redis_pool),
+    ) -> None:
         self.session = session
+        self.redis_pool = redis_pool
         self.refresh_jwt_prefix = "token_refresh"
+
+    async def _get_redis(self) -> Redis:
+        async with Redis(connection_pool=self.redis_pool) as redis:
+            return redis
 
     def _hash_password(self, password: str) -> str:
         salt = bcrypt.gensalt()
@@ -88,3 +102,21 @@ class UserDAO:
         self.session.add(user)
         await self.session.commit()
         return user
+
+    async def save_refresh_token_to_redis(
+        self,
+        user: User,
+        token: str,
+        expire_days: int = settings.auth_jwt.refresh_token_expire_days,
+    ) -> None:
+        """Saves user's refresh token to redis."""
+        redis = await self._get_redis()
+        key = self._create_refresh_token_key(
+            user_id=user.id,
+            token=token,
+        )
+        await redis.setex(
+            name=key,
+            time=timedelta(days=expire_days),
+            value=1,
+        )
