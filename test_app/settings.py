@@ -27,6 +27,8 @@ class AuthJWT(BaseSettings):
 
     users_secret: str = os.getenv("USERS_SECRET", secrets.token_urlsafe())
     algorithm: str = "HS256"
+    access_token_expire_minutes: int | None = 30
+    refresh_token_expire_days: int = 30
 
 
 class Settings(BaseSettings):
