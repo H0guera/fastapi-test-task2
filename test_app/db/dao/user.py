@@ -24,6 +24,16 @@ class UserDAO:
         salt = bcrypt.gensalt()
         return ensure_str(bcrypt.hashpw(password=ensure_bytes(password), salt=salt))
 
+    def _verify_password(
+        self,
+        plain_password: str,
+        hashed_password: str,
+    ) -> bool:
+        return bcrypt.checkpw(
+            ensure_bytes(plain_password),
+            ensure_bytes(hashed_password),
+        )
+
     async def get_user_by_username(self, username: str) -> User | None:
         """Retrieve user by username."""
         stmt = select(User).where(User.username == username)
