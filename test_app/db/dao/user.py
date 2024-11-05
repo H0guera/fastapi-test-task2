@@ -19,6 +19,7 @@ class UserDAO:
 
     def __init__(self, session: "AsyncSession" = Depends(get_db_session)) -> None:
         self.session = session
+        self.refresh_jwt_prefix = "token_refresh"
 
     def _hash_password(self, password: str) -> str:
         salt = bcrypt.gensalt()
@@ -33,6 +34,13 @@ class UserDAO:
             ensure_bytes(plain_password),
             ensure_bytes(hashed_password),
         )
+
+    def _create_refresh_token_key(
+        self,
+        user_id: int,
+        token: str,
+    ) -> str:
+        return f"{self.refresh_jwt_prefix}:user_{user_id}:{token}"
 
     async def get_user_by_username(self, username: str) -> User | None:
         """Retrieve user by username."""
