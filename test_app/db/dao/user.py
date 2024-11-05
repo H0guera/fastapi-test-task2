@@ -40,6 +40,27 @@ class UserDAO:
         result = await self.session.scalars(stmt)
         return result.one_or_none()
 
+    async def authenticate(
+        self,
+        username: str,
+        password: str,
+    ) -> User | None:
+        """Authenticate and return a user following an username and a password."""
+        user = await self.get_user_by_username(username)
+        if not user:
+            # Run the hasher to mitigate timing attack
+            # Inspired from Django: https://code.djangoproject.com/ticket/20760
+            self._hash_password(password)
+            return None
+
+        verified = self._verify_password(
+            plain_password=password,
+            hashed_password=user.hashed_password,
+        )
+        if verified:
+            return user
+        return None
+
     async def create_user_model(
         self,
         user_create: UserCreate,
