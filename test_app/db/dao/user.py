@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 
 import bcrypt
 from fastapi import Depends
+from jwt import InvalidTokenError
 from redis.asyncio import Redis
 from sqlalchemy import select
 
@@ -10,6 +11,10 @@ from test_app.db.dependencies import get_db_session
 from test_app.db.models.users import User
 from test_app.services.redis.dependency import get_redis_pool
 from test_app.settings import settings
+from test_app.utils.auth import (
+    REFRESH_JWT_TYPE,
+    decode_jwt,
+)
 from test_app.utils.ensure_types import ensure_bytes, ensure_str
 from test_app.web.api.auth.schema import UserCreate
 from test_app.web.api.exceptions import UserAlreadyExistsError
@@ -134,3 +139,39 @@ class UserDAO:
             time=timedelta(days=expire_days),
             value=0,
         )
+
+    async def _validate_token(
+        self,
+        token: str,
+        expected_token_type: str,
+    ) -> int | None:
+        """Validates token's payload and returns user_id."""
+        try:
+            match decode_jwt(token):
+                case {
+                    "sub": int() as user_id,
+                    "type": _type,
+                } if _type == expected_token_type:
+                    if (
+                        expected_token_type == REFRESH_JWT_TYPE
+                        and not await self._check_refresh_token_in_redis(
+                            user_id=user_id,
+                            token=token,
+                        )
+                    ):
+                        return None
+                    return user_id
+                case _:
+                    return None
+        except InvalidTokenError:
+            return None
+
+    async def get_current_auth_user_by_token(
+        self,
+        token: str,
+        expected_token_type: str,
+    ) -> User | None:
+        """Getting auth user by token."""
+        if validated_user_id := await self._validate_token(token, expected_token_type):
+            return await self.get_user_by_id(user_id=validated_user_id)
+        return None
