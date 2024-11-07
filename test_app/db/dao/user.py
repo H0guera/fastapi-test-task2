@@ -83,6 +83,12 @@ class UserDAO:
             return user
         return None
 
+    async def get_user_by_id(self, user_id: int) -> User | None:
+        """Retrieve user by id."""
+        stmt = select(User).where(User.id == user_id)
+        result = await self.session.scalars(stmt)
+        return result.one_or_none()
+
     async def create_user_model(
         self,
         user_create: UserCreate,
