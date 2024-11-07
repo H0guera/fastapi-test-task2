@@ -106,8 +106,16 @@ class UserDAO:
         hashed_password = self._hash_password(user_create.password)
         user = User(username=user_create.username, hashed_password=hashed_password)
         self.session.add(user)
-        await self.session.commit()
         return user
+
+    async def _check_refresh_token_in_redis(
+        self,
+        user_id: int,
+        token: str,
+    ) -> str | None:
+        redis = await self._get_redis()
+        key = self._create_refresh_token_key(user_id, token)
+        return await redis.get(key)
 
     async def save_refresh_token_to_redis(
         self,
@@ -124,5 +132,5 @@ class UserDAO:
         await redis.setex(
             name=key,
             time=timedelta(days=expire_days),
-            value=1,
+            value=0,
         )
