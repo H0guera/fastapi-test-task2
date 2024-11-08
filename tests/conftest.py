@@ -150,3 +150,25 @@ async def user(
     dbsession.add(new_user)
     await dbsession.commit()
     return new_user
+
+
+@pytest.fixture
+async def authenticated_headers(
+    user: User,
+    fastapi_app: FastAPI,
+    client: AsyncClient,
+) -> dict:
+    """Creates access and refresh authorization headers for user."""
+    url = fastapi_app.url_path_for("login_user")
+    username = user.username
+    password = USER_PASSWORD
+
+    response = await client.post(
+        url,
+        data={"username": username, "password": password},
+    )
+    tokens = response.json()
+    return {
+        "access_header": {"Authorization": f"Bearer {tokens['access_token']}"},
+        "refresh_header": {"Authorization": f"Bearer {tokens['refresh_token']}"},
+    }
