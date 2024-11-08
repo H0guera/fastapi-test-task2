@@ -5,7 +5,11 @@ from fastapi.param_functions import Depends
 
 from test_app.db.dao import UserDAO
 from test_app.db.models.users import User
-from test_app.utils.auth import create_access_token, create_refresh_token
+from test_app.services.auth import refresh_access_token
+from test_app.utils.auth import (
+    create_access_token,
+    create_refresh_token,
+)
 from test_app.web.api.auth.schema import TokenInfo, UserBase, UserCreate
 from test_app.web.api.exceptions import UserAlreadyExistsError
 
@@ -70,3 +74,31 @@ async def login_user(
     refresh_token = create_refresh_token({"sub": user.id})
     await user_dao.save_refresh_token_to_redis(user=user, token=refresh_token)
     return TokenInfo(access_token=access_token, refresh_token=refresh_token)
+
+
+@router.post(
+    "/refresh",
+    response_model=TokenInfo,
+    response_model_exclude_none=True,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "INVALID_TOKEN": {
+                            "summary": "Token is invalid",
+                            "value": {
+                                "detail": "INVALID_TOKEN",
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+)
+async def token_refresh(
+    token: str = Depends(refresh_access_token),
+) -> TokenInfo:
+    """Creates fresh access token."""
+    return TokenInfo(access_token=token)
