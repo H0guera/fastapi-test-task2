@@ -15,14 +15,18 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from test_app.db.dependencies import get_db_session
+from test_app.db.models.tasks import Task
 from test_app.db.models.users import User
 from test_app.db.utils import create_database, drop_database
 from test_app.services.redis.dependency import get_redis_pool
 from test_app.settings import settings
 from test_app.utils.ensure_types import ensure_bytes, ensure_str
+from test_app.utils.task_status import TaskStatus
 from test_app.web.application import get_app
 
 USER_PASSWORD = "VedroKumisa"  # noqa: S105
+TODO_TASK_STATUS = TaskStatus.TODO
+DONE_TASK_STATUS = TaskStatus.DONE
 
 
 @pytest.fixture(scope="session")
@@ -148,7 +152,6 @@ async def user(
     )
     new_user = User(username="NoskiSNachesom", hashed_password=hashed_password)
     dbsession.add(new_user)
-    await dbsession.commit()
     return new_user
 
 
@@ -172,3 +175,39 @@ async def authenticated_headers(
         "access_header": {"Authorization": f"Bearer {tokens['access_token']}"},
         "refresh_header": {"Authorization": f"Bearer {tokens['refresh_token']}"},
     }
+
+
+@pytest.fixture
+async def todo_task(
+    user: User,
+    fastapi_app: FastAPI,
+    client: AsyncClient,
+    dbsession: AsyncSession,
+) -> Task:
+    """Fixture for creating existing task."""
+    new_task = Task(
+        title="NewTask",
+        description="very long description",
+        status=TODO_TASK_STATUS,
+        user_id=user.id,
+    )
+    dbsession.add(new_task)
+    return new_task
+
+
+@pytest.fixture
+async def done_task(
+    user: User,
+    fastapi_app: FastAPI,
+    client: AsyncClient,
+    dbsession: AsyncSession,
+) -> Task:
+    """Fixture for creating another task."""
+    new_task = Task(
+        title="AnotherNewTask",
+        description="very long description",
+        status=DONE_TASK_STATUS,
+        user_id=user.id,
+    )
+    dbsession.add(new_task)
+    return new_task
