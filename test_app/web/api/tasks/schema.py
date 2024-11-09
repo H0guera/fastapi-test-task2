@@ -9,3 +9,11 @@ class TaskBase(BaseModel):
     title: str
     description: str
     status: TaskStatus
+
+
+class TaskUpdatePartial(BaseModel):
+    """Model for optional update task object."""
+
+    title: str | None = None
+    description: str | None = None
+    status: TaskStatus | None = None
