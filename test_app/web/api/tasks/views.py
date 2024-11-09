@@ -8,8 +8,9 @@ from test_app.db.dao.task import TaskDAO
 from test_app.db.models.tasks import Task
 from test_app.db.models.users import User
 from test_app.services.auth import get_current_auth_user
+from test_app.services.tasks.dependecies import get_task_by_id
 from test_app.utils.task_status import TaskStatus
-from test_app.web.api.tasks.schema import TaskBase
+from test_app.web.api.tasks.schema import TaskBase, TaskUpdatePartial
 
 router = APIRouter()
 
@@ -74,3 +75,37 @@ async def get_all_tasks(
 ) -> Sequence[Task]:
     """Gets all tasks with optional filter by status."""
     return await task_dao.get_all_tasks(status=status)
+
+
+@router.patch(
+    "/{id}",
+    response_model=TaskUpdatePartial,
+    response_model_exclude_unset=True,
+    responses={
+        http_status.HTTP_403_FORBIDDEN: {
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "FORBIDDEN": {
+                            "summary": "Forbidden.",
+                            "value": {
+                                "detail": "Forbidden",
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+)
+async def task_update_partial(
+    updated_task: TaskUpdatePartial,
+    task_dao: Annotated[TaskDAO, Depends()],
+    task: Task = Depends(get_task_by_id),
+) -> Task:
+    """Partial updates task."""
+    return await task_dao.update_task(
+        target_task=task,
+        updated_task=updated_task,
+        partial=True,
+    )
