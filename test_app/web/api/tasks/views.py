@@ -109,3 +109,31 @@ async def task_update_partial(
         updated_task=updated_task,
         partial=True,
     )
+
+
+@router.delete(
+    "/{id}",
+    status_code=http_status.HTTP_204_NO_CONTENT,
+    responses={
+        http_status.HTTP_403_FORBIDDEN: {
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "FORBIDDEN": {
+                            "summary": "Forbidden.",
+                            "value": {
+                                "detail": "Forbidden",
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+)
+async def delete_task(
+    task_dao: Annotated[TaskDAO, Depends()],
+    task: Task = Depends(get_task_by_id),
+) -> None:
+    """Deletes task."""
+    return await task_dao.delete_task(task=task)
