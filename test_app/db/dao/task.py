@@ -64,3 +64,7 @@ class TaskDAO:
         for name, value in updated_task.model_dump(exclude_unset=partial).items():
             setattr(target_task, name, value)
         return target_task
+
+    async def delete_task(self, task: Task) -> None:
+        """Deletes task from db table."""
+        return await self.session.delete(task)
