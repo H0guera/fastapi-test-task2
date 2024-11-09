@@ -152,6 +152,22 @@ async def user(
     )
     new_user = User(username="NoskiSNachesom", hashed_password=hashed_password)
     dbsession.add(new_user)
+    await dbsession.commit()
+    return new_user
+
+
+@pytest.fixture
+async def another_user(
+    dbsession: AsyncSession,
+) -> User:
+    """Fixture for creating another user."""
+    claim_password = USER_PASSWORD
+    hashed_password = ensure_str(
+        bcrypt.hashpw(password=ensure_bytes(claim_password), salt=bcrypt.gensalt()),
+    )
+    new_user = User(username="AnotherUser", hashed_password=hashed_password)
+    dbsession.add(new_user)
+    await dbsession.commit()
     return new_user
 
 
@@ -178,6 +194,25 @@ async def authenticated_headers(
 
 
 @pytest.fixture
+async def another_user_access_header(
+    another_user: User,
+    fastapi_app: FastAPI,
+    client: AsyncClient,
+) -> dict:
+    """Creates access header for another user."""
+    url = fastapi_app.url_path_for("login_user")
+    username = another_user.username
+    password = USER_PASSWORD
+
+    response = await client.post(
+        url,
+        data={"username": username, "password": password},
+    )
+    tokens = response.json()
+    return {"Authorization": f"Bearer {tokens['access_token']}"}
+
+
+@pytest.fixture
 async def todo_task(
     user: User,
     fastapi_app: FastAPI,
@@ -192,6 +227,7 @@ async def todo_task(
         user_id=user.id,
     )
     dbsession.add(new_task)
+    await dbsession.commit()
     return new_task
 
 
@@ -210,4 +246,5 @@ async def done_task(
         user_id=user.id,
     )
     dbsession.add(new_task)
+    await dbsession.commit()
     return new_task
