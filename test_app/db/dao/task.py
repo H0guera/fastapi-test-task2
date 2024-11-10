@@ -36,6 +36,11 @@ class TaskDAO:
         self.session.add(task)
         return task
 
+    async def get_task_by_id(self, task_id: int) -> Task | None:
+        """Gets task object by id."""
+        stmt = select(Task).where(Task.id == task_id)
+        return await self.session.scalar(stmt)
+
     async def get_all_tasks(
         self,
         status: TaskStatus | None,
