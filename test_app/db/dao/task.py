@@ -6,7 +6,7 @@ from sqlalchemy import ScalarResult, select
 from test_app.db.dependencies import get_db_session
 from test_app.db.models.tasks import Task
 from test_app.utils.task_status import TaskStatus
-from test_app.web.api.tasks.schema import TaskBase
+from test_app.web.api.tasks.schema import TaskBase, TaskUpdatePartial
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,3 +53,14 @@ class TaskDAO:
         )
         result: ScalarResult[Task] = await self.session.scalars(stmt)
         return list(result.all())
+
+    async def update_task(
+        self,
+        target_task: Task,
+        updated_task: TaskUpdatePartial,
+        partial: bool = False,
+    ) -> Task:
+        """Updates task object."""
+        for name, value in updated_task.model_dump(exclude_unset=partial).items():
+            setattr(target_task, name, value)
+        return target_task
